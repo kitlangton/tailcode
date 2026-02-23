@@ -31,6 +31,8 @@
     "src/qr.ts",
     "src/state.ts",
     "src/services/*.ts",
+    "tsconfig.json",
+    "bunfig.toml",
     "README.md"
   ],
   "bin": {
