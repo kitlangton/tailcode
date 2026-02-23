@@ -80,4 +80,22 @@ if (!forceWizard) {
   }
 }
 
+// When run via bunx or global install, Bun doesn't get the flags it needs.
+// Re-launch ourselves with the right settings so the wizard actually loads.
+const MARKER = "__TAILCODE_REEXEC"
+if (!process.env[MARKER]) {
+  const pkgRoot = import.meta.dirname + "/.."
+  const child = Bun.spawn(
+    [process.execPath, "run", "--conditions=browser", "--preserve-symlinks", import.meta.filename, ...args],
+    {
+      cwd: pkgRoot, // so Bun picks up our tsconfig.json for JSX
+      stdin: "inherit",
+      stdout: "inherit",
+      stderr: "inherit",
+      env: { ...process.env, [MARKER]: "1" },
+    },
+  )
+  process.exit(await child.exited)
+}
+
 await import("../src/main.tsx")
