@@ -114,3 +114,15 @@ jobs:
 
       - name: Publish to NPM with OIDC
         run: npm publish --access public
+
+  update-homebrew:
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Homebrew formula
+        uses: prantlf/update-formula@v1
+        with:
+          tap: kitlangton/homebrew-tap
+          formula: tailcode
+          tag: ${{ github.ref_name }}
+          github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
