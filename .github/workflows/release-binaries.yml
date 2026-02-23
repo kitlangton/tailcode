@@ -11,7 +11,7 @@ permissions:
   id-token: write  # Required for NPM Trusted Publishers (OIDC)
 
 jobs:
-  build:
+  build-macos:
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -25,28 +25,58 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build release binaries
-        run: bun run build:release
+      - name: Build macOS binaries
+        run: |
+          bun run build:bundle
+          bun run build.ts compile
 
-      - name: Upload artifacts
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binaries
-          path: dist/releases/
+          name: macos-binaries
+          path: dist/releases/*
           retention-days: 5
 
-  github-release:
-    needs: build
-    runs-on: macos-latest
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build Linux binaries
+        run: |
+          bun run build:bundle
+          bun run build.ts compile
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-binaries
+          path: dist/releases/*
+          retention-days: 5
+
+  github-release:
+    needs: [build-macos, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: binaries
           path: dist/releases/
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist/releases/
+          sha256sum * > SHA256SUMS
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -57,8 +87,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   publish-npm:
-    needs: build
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4

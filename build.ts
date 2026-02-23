@@ -7,25 +7,8 @@ const RELEASES_DIR = "./dist/releases";
 type CompileTarget =
   | "bun-darwin-arm64"
   | "bun-darwin-x64"
-  | "bun-darwin-x64-baseline"
   | "bun-linux-x64"
-  | "bun-linux-x64-baseline"
-  | "bun-linux-x64-modern"
-  | "bun-linux-arm64"
-  | "bun-windows-x64"
-  | "bun-windows-x64-baseline"
-  | "bun-windows-x64-modern";
-
-const ALL_TARGETS: CompileTarget[] = [
-  "bun-darwin-arm64",
-  "bun-darwin-x64",
-  "bun-darwin-x64-baseline",
-  "bun-linux-x64",
-  "bun-linux-x64-baseline",
-  "bun-linux-arm64",
-  "bun-windows-x64",
-  "bun-windows-x64-baseline",
-];
+  | "bun-linux-arm64";
 
 async function bundle() {
   console.log("📦 Bundling tailcode CLI...");
@@ -65,7 +48,7 @@ async function compile(target: CompileTarget, bundlePath: string) {
     compile: {
       target,
       outfile: outputPath,
-      autoloadBunfig: false, // Disable bunfig.toml loading (preload is bundled)
+      autoloadBunfig: false,
       autoloadTsconfig: false,
       autoloadPackageJson: false,
     },
@@ -82,36 +65,6 @@ async function compile(target: CompileTarget, bundlePath: string) {
 
   console.log(`✅ Compiled: ${outputPath}`);
   return true;
-}
-
-async function generateChecksums() {
-  console.log("🔐 Generating checksums...");
-
-  const checksums: string[] = [];
-
-  for (const target of ALL_TARGETS) {
-    const isWindows = target.includes("windows");
-    const ext = isWindows ? ".exe" : "";
-    const filename = `tailcode-${target.replace("bun-", "")}${ext}`;
-    const filepath = `${RELEASES_DIR}/${filename}`;
-
-    if (!existsSync(filepath)) {
-      console.warn(`⚠️  Missing: ${filename}`);
-      continue;
-    }
-
-    const file = Bun.file(filepath);
-    const content = await file.arrayBuffer();
-    const hashBuffer = await crypto.subtle.digest("SHA-256", content);
-    const hash = Array.from(new Uint8Array(hashBuffer))
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    checksums.push(`${hash}  ${filename}`);
-  }
-
-  const checksumContent = checksums.join("\n") + "\n";
-  await Bun.write(`${RELEASES_DIR}/SHA256SUMS`, checksumContent);
-  console.log(`✅ Checksums written to ${RELEASES_DIR}/SHA256SUMS`);
 }
 
 async function main() {
@@ -139,78 +92,46 @@ async function main() {
         await bundle();
       }
 
-      // Compile for current platform
-      const targets: CompileTarget[] = [];
-
-      // Detect current platform
+      // Compile only for current platform (native build)
       const platform = process.platform;
       const arch = process.arch;
-
+      
+      let target: CompileTarget | null = null;
+      
       if (platform === "darwin") {
         if (arch === "arm64") {
-          targets.push("bun-darwin-arm64");
+          target = "bun-darwin-arm64";
         } else if (arch === "x64") {
-          targets.push("bun-darwin-x64");
+          target = "bun-darwin-x64";
         }
       } else if (platform === "linux") {
         if (arch === "x64") {
-          targets.push("bun-linux-x64");
+          target = "bun-linux-x64";
         } else if (arch === "arm64") {
-          targets.push("bun-linux-arm64");
-        }
-      } else if (platform === "win32") {
-        if (arch === "x64") {
-          targets.push("bun-windows-x64");
+          target = "bun-linux-arm64";
         }
       }
 
-      if (targets.length === 0) {
+      if (!target) {
         console.error(`❌ Unsupported platform: ${platform} ${arch}`);
         process.exit(1);
       }
 
-      for (const target of targets) {
-        const success = await compile(target, bundlePath);
-        if (!success) {
-          console.error(`❌ Failed to compile for ${target}`);
-          process.exit(1);
-        }
+      const success = await compile(target, bundlePath);
+      if (!success) {
+        console.error(`❌ Failed to compile for ${target}`);
+        process.exit(1);
       }
 
-      break;
-    }
-
-    case "release": {
-      // Full release build: bundle + compile all targets + checksums
-      await bundle();
-
-      // Compile all supported targets
-      let failed = 0;
-      for (const target of ALL_TARGETS) {
-        const success = await compile(target, "./dist/tailcode.js");
-        if (!success) {
-          failed++;
-          console.warn(`⚠️  Failed: ${target}`);
-        }
-      }
-
-      if (failed > 0) {
-        console.warn(`\n⚠️  ${failed} target(s) failed to compile`);
-      }
-
-      await generateChecksums();
-      console.log("\n🎉 Release build complete!");
-      console.log(`   Artifacts in: ${RELEASES_DIR}`);
       break;
     }
 
     default: {
-      console.log("Usage: bun run build.ts [bundle|compile|release]");
+      console.log("Usage: bun run build.ts [bundle|compile]");
       console.log("");
       console.log("Commands:");
       console.log("  bundle   - Bundle to dist/tailcode.js");
       console.log("  compile  - Compile for current platform");
-      console.log("  release  - Build all release binaries + checksums");
       process.exit(1);
     }
   }
