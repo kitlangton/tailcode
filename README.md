@@ -1,12 +1,33 @@
 # TailCode
 
-TailCode is a small terminal wizard that sets up remote access to OpenCode over your Tailscale tailnet.
+TailCode is a terminal wizard that connects Tailscale + OpenCode and publishes OpenCode to your tailnet with a shareable URL and QR code.
 
-It walks you through:
-- connecting/logging into Tailscale
-- starting `opencode serve` on `127.0.0.1`
-- publishing it with `tailscale serve`
-- showing the tailnet URL and a QR code for phone access
+## Quick Install
+
+Prerequisites: `tailscale` and `opencode` installed and available on your PATH.
+
+### Homebrew (recommended)
+
+```bash
+brew tap kitlangton/tap
+brew install tailcode
+tailcode
+```
+
+### Bunx (no global install)
+
+```bash
+bunx @kitlangton/tailcode
+```
+
+### Direct binary
+
+Download the latest binary from [GitHub Releases](https://github.com/kitlangton/tailcode/releases/latest), mark it executable, then run it:
+
+```bash
+chmod +x ./tailcode
+./tailcode
+```
 
 ## How It Works
 
@@ -116,7 +137,7 @@ TAILCODE_PORT=4096 TAILCODE_PASSWORD=secret bun run start
 
 - The published URL is only reachable from devices on your Tailscale tailnet
 - OpenCode is bound to localhost to avoid exposing it on your LAN
-- Running `tailcode` again will auto-attach if OpenCode is already running locally
+- `tailcode` always opens the setup wizard (use `tailcode --attach` for explicit attach)
 - TailCode shows a local attach command after setup: `opencode attach http://127.0.0.1:4096`
 
 ## Binary Releases
