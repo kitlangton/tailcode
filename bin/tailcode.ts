@@ -80,22 +80,4 @@ if (!forceWizard) {
   }
 }
 
-const reexecMarker = "__TAILCODE_REEXEC"
-if (!process.env[reexecMarker]) {
-  const child = Bun.spawn(
-    [process.execPath, "run", "--conditions=browser", "--preserve-symlinks", import.meta.filename, ...args],
-    {
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-      env: {
-        ...process.env,
-        [reexecMarker]: "1",
-      },
-    },
-  )
-
-  process.exit(await child.exited)
-}
-
 await import("../src/main.tsx")

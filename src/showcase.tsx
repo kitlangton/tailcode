@@ -1,3 +1,8 @@
+/** @jsxImportSource @opentui/solid */
+
+// Explicitly load the OpenTUI Solid preload (normally done via bunfig.toml in dev)
+import "@opentui/solid/preload"
+
 import { render, useKeyboard } from "@opentui/solid"
 import { RegistryContext } from "@effect/atom-solid/RegistryContext"
 import { createSignal, onMount } from "solid-js"

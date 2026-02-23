@@ -41,6 +41,34 @@ opencode --version
 
 ## Run TailCode
 
+### Option 1: Binary Releases (Recommended)
+
+Download pre-built binaries from [GitHub Releases](https://github.com/kitlangton/tailcode/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -L -o tailcode https://github.com/kitlangton/tailcode/releases/latest/download/tailcode-darwin-arm64
+chmod +x tailcode
+./tailcode
+
+# macOS (Intel)
+curl -L -o tailcode https://github.com/kitlangton/tailcode/releases/latest/download/tailcode-darwin-x64
+chmod +x tailcode
+./tailcode
+
+# Linux (x64)
+curl -L -o tailcode https://github.com/kitlangton/tailcode/releases/latest/download/tailcode-linux-x64
+chmod +x tailcode
+./tailcode
+
+# Linux (ARM64)
+curl -L -o tailcode https://github.com/kitlangton/tailcode/releases/latest/download/tailcode-linux-arm64
+chmod +x tailcode
+./tailcode
+```
+
+### Option 2: Via Bun (requires Bun runtime)
+
 Requires Bun (the `tailcode` executable is a Bun CLI):
 
 ```bash
@@ -60,7 +88,7 @@ bun add -g @kitlangton/tailcode
 tailcode
 ```
 
-Run from source:
+### Option 3: Run from Source
 
 ```bash
 bun install
@@ -90,3 +118,48 @@ TAILCODE_PORT=4096 TAILCODE_PASSWORD=secret bun run start
 - OpenCode is bound to localhost to avoid exposing it on your LAN
 - Running `tailcode` again will auto-attach if OpenCode is already running locally
 - TailCode shows a local attach command after setup: `opencode attach http://127.0.0.1:4096`
+
+## Binary Releases
+
+We provide standalone binaries for:
+
+- **macOS**: `arm64` (Apple Silicon), `x64` (Intel)
+- **Linux**: `x64`, `arm64`
+- **Windows**: `x64` (coming soon)
+
+Binaries are compiled with Bun and include the Bun runtime. No separate Bun installation needed.
+
+### Verification
+
+All releases include SHA256 checksums in `SHA256SUMS`. Verify after download:
+
+```bash
+# macOS/Linux
+sha256sum -c SHA256SUMS
+```
+
+## Development
+
+### Building Locally
+
+```bash
+# Bundle for local testing
+bun run build:bundle
+
+# Compile for current platform
+bun run build:compile
+
+# Full release build (all platforms + checksums)
+bun run build:release
+```
+
+### Scripts
+
+- `bun run typecheck` - Type check with TypeScript
+- `bun run lint` - Lint with oxlint
+- `bun run fmt` - Format with oxfmt
+- `bun run check` - Run all checks (typecheck + lint + fmt)
+
+## License
+
+MIT

@@ -1,0 +1,222 @@
+import solidPlugin from "@opentui/solid/bun-plugin";
+import { existsSync, mkdirSync } from "fs";
+
+const RELEASES_DIR = "./dist/releases";
+
+// Supported compilation targets
+type CompileTarget =
+  | "bun-darwin-arm64"
+  | "bun-darwin-x64"
+  | "bun-darwin-x64-baseline"
+  | "bun-linux-x64"
+  | "bun-linux-x64-baseline"
+  | "bun-linux-x64-modern"
+  | "bun-linux-arm64"
+  | "bun-windows-x64"
+  | "bun-windows-x64-baseline"
+  | "bun-windows-x64-modern";
+
+const ALL_TARGETS: CompileTarget[] = [
+  "bun-darwin-arm64",
+  "bun-darwin-x64",
+  "bun-darwin-x64-baseline",
+  "bun-linux-x64",
+  "bun-linux-x64-baseline",
+  "bun-linux-arm64",
+  "bun-windows-x64",
+  "bun-windows-x64-baseline",
+];
+
+async function bundle() {
+  console.log("📦 Bundling tailcode CLI...");
+
+  const result = await Bun.build({
+    entrypoints: ["./bin/tailcode.ts"],
+    outdir: "./dist",
+    target: "bun",
+    conditions: ["browser"],
+    plugins: [solidPlugin],
+    minify: true,
+    sourcemap: "linked",
+  });
+
+  if (!result.success) {
+    console.error("❌ Bundle failed:");
+    for (const log of result.logs) {
+      console.error(log);
+    }
+    process.exit(1);
+  }
+
+  console.log(`✅ Bundled to dist/tailcode.js (${result.outputs.length} files)`);
+  return result;
+}
+
+async function compile(target: CompileTarget, bundlePath: string) {
+  const isWindows = target.includes("windows");
+  const ext = isWindows ? ".exe" : "";
+  const outputName = `tailcode-${target.replace("bun-", "")}${ext}`;
+  const outputPath = `${RELEASES_DIR}/${outputName}`;
+
+  console.log(`🔨 Compiling for ${target}...`);
+
+  const result = await Bun.build({
+    entrypoints: [bundlePath],
+    compile: {
+      target,
+      outfile: outputPath,
+      autoloadBunfig: false, // Disable bunfig.toml loading (preload is bundled)
+      autoloadTsconfig: false,
+      autoloadPackageJson: false,
+    },
+    minify: true,
+  });
+
+  if (!result.success) {
+    console.error(`❌ Compile failed for ${target}:`);
+    for (const log of result.logs) {
+      console.error(log);
+    }
+    return false;
+  }
+
+  console.log(`✅ Compiled: ${outputPath}`);
+  return true;
+}
+
+async function generateChecksums() {
+  console.log("🔐 Generating checksums...");
+
+  const checksums: string[] = [];
+
+  for (const target of ALL_TARGETS) {
+    const isWindows = target.includes("windows");
+    const ext = isWindows ? ".exe" : "";
+    const filename = `tailcode-${target.replace("bun-", "")}${ext}`;
+    const filepath = `${RELEASES_DIR}/${filename}`;
+
+    if (!existsSync(filepath)) {
+      console.warn(`⚠️  Missing: ${filename}`);
+      continue;
+    }
+
+    const file = Bun.file(filepath);
+    const content = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", content);
+    const hash = Array.from(new Uint8Array(hashBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+    checksums.push(`${hash}  ${filename}`);
+  }
+
+  const checksumContent = checksums.join("\n") + "\n";
+  await Bun.write(`${RELEASES_DIR}/SHA256SUMS`, checksumContent);
+  console.log(`✅ Checksums written to ${RELEASES_DIR}/SHA256SUMS`);
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const command = args[0] || "bundle";
+
+  // Ensure dist directories exist
+  if (!existsSync("./dist")) {
+    mkdirSync("./dist", { recursive: true });
+  }
+  if (!existsSync(RELEASES_DIR)) {
+    mkdirSync(RELEASES_DIR, { recursive: true });
+  }
+
+  switch (command) {
+    case "bundle": {
+      await bundle();
+      break;
+    }
+
+    case "compile": {
+      const bundlePath = "./dist/tailcode.js";
+      if (!existsSync(bundlePath)) {
+        console.log("📦 Bundle not found, bundling first...");
+        await bundle();
+      }
+
+      // Compile for current platform
+      const targets: CompileTarget[] = [];
+
+      // Detect current platform
+      const platform = process.platform;
+      const arch = process.arch;
+
+      if (platform === "darwin") {
+        if (arch === "arm64") {
+          targets.push("bun-darwin-arm64");
+        } else if (arch === "x64") {
+          targets.push("bun-darwin-x64");
+        }
+      } else if (platform === "linux") {
+        if (arch === "x64") {
+          targets.push("bun-linux-x64");
+        } else if (arch === "arm64") {
+          targets.push("bun-linux-arm64");
+        }
+      } else if (platform === "win32") {
+        if (arch === "x64") {
+          targets.push("bun-windows-x64");
+        }
+      }
+
+      if (targets.length === 0) {
+        console.error(`❌ Unsupported platform: ${platform} ${arch}`);
+        process.exit(1);
+      }
+
+      for (const target of targets) {
+        const success = await compile(target, bundlePath);
+        if (!success) {
+          console.error(`❌ Failed to compile for ${target}`);
+          process.exit(1);
+        }
+      }
+
+      break;
+    }
+
+    case "release": {
+      // Full release build: bundle + compile all targets + checksums
+      await bundle();
+
+      // Compile all supported targets
+      let failed = 0;
+      for (const target of ALL_TARGETS) {
+        const success = await compile(target, "./dist/tailcode.js");
+        if (!success) {
+          failed++;
+          console.warn(`⚠️  Failed: ${target}`);
+        }
+      }
+
+      if (failed > 0) {
+        console.warn(`\n⚠️  ${failed} target(s) failed to compile`);
+      }
+
+      await generateChecksums();
+      console.log("\n🎉 Release build complete!");
+      console.log(`   Artifacts in: ${RELEASES_DIR}`);
+      break;
+    }
+
+    default: {
+      console.log("Usage: bun run build.ts [bundle|compile|release]");
+      console.log("");
+      console.log("Commands:");
+      console.log("  bundle   - Bundle to dist/tailcode.js");
+      console.log("  compile  - Compile for current platform");
+      console.log("  release  - Build all release binaries + checksums");
+      process.exit(1);
+    }
+  }
+}
+
+main().catch((err) => {
+  console.error("❌ Build failed:", err);
+  process.exit(1);
+});

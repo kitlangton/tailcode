@@ -51,8 +51,13 @@
     "fmt:check": "oxfmt --check src bin",
     "lint": "oxlint src bin",
     "check": "bun run typecheck && bun run lint && bun run fmt:check",
-    "publish:dry": "bun run check && bun publish --dry-run",
-    "publish:npm": "bun run check && bun publish"
+    "build": "bun run build.ts",
+    "build:bundle": "bun run build.ts bundle",
+    "build:compile": "bun run build.ts compile",
+    "build:release": "bun run build.ts release",
+    "smoke:bundle": "bun run ./dist/tailcode.js",
+    "publish:dry": "bun run check && bun run build && bun publish --dry-run",
+    "publish:npm": "bun run check && bun run build && bun publish"
   },
   "dependencies": {
     "@effect/atom-solid": "4.0.0-beta.11",
