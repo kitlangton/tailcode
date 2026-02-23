@@ -41,6 +41,27 @@ opencode --version
 
 ## Run TailCode
 
+Requires Bun (the `tailcode` executable is a Bun CLI):
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+Run without installing globally:
+
+```bash
+bunx @kitlangton/tailcode
+```
+
+Or install globally:
+
+```bash
+bun add -g @kitlangton/tailcode
+tailcode
+```
+
+Run from source:
+
 ```bash
 bun install
 bun run start
@@ -67,4 +88,5 @@ TAILCODE_PORT=4096 TAILCODE_PASSWORD=secret bun run start
 
 - The published URL is only reachable from devices on your Tailscale tailnet
 - OpenCode is bound to localhost to avoid exposing it on your LAN
+- Running `tailcode` again will auto-attach if OpenCode is already running locally
 - TailCode shows a local attach command after setup: `opencode attach http://127.0.0.1:4096`

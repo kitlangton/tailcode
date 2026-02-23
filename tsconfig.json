@@ -7,5 +7,5 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "plugins": [{ "name": "@effect/language-service" }]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "bin/**/*.ts"]
 }

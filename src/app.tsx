@@ -409,7 +409,7 @@ export function App(props: AppProps = {}) {
   }
 
   const stageRow = () => (
-    <box flexDirection={compact() ? "column" : "row"} gap={0}>
+    <box flexDirection="row" gap={0}>
       {stageBadge("tailscale", "Tailscale")}
       {stageBadge("opencode", "OpenCode")}
       {stageBadge("publish", "Publish")}

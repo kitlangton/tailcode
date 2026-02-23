@@ -1,17 +1,56 @@
 {
-  "name": "tailcode",
-  "private": true,
+  "name": "@kitlangton/tailcode",
+  "version": "0.1.1",
+  "description": "Terminal wizard for publishing OpenCode to your Tailscale tailnet",
+  "license": "UNLICENSED",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kitlangton/tailcode.git"
+  },
+  "homepage": "https://github.com/kitlangton/tailcode",
+  "bugs": {
+    "url": "https://github.com/kitlangton/tailcode/issues"
+  },
+  "keywords": [
+    "tailscale",
+    "opencode",
+    "cli",
+    "tui",
+    "bun"
+  ],
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "files": [
+    "bin/tailcode.ts",
+    "src/main.tsx",
+    "src/app.tsx",
+    "src/flow.ts",
+    "src/runtime.ts",
+    "src/qr.ts",
+    "src/state.ts",
+    "src/services/*.ts",
+    "README.md"
+  ],
+  "bin": {
+    "tailcode": "./bin/tailcode.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "bun run --conditions=browser --preserve-symlinks --hot src/main.tsx",
     "start": "bun run --conditions=browser --preserve-symlinks src/main.tsx",
     "showcase": "bun run --conditions=browser --preserve-symlinks src/showcase.tsx",
     "showcase:dev": "bun run --conditions=browser --preserve-symlinks --hot src/showcase.tsx",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "fmt": "oxfmt --write src",
-    "fmt:check": "oxfmt --check src",
-    "lint": "oxlint src",
-    "check": "bun run typecheck && bun run lint && bun run fmt:check"
+    "fmt": "oxfmt --write src bin",
+    "fmt:check": "oxfmt --check src bin",
+    "lint": "oxlint src bin",
+    "check": "bun run typecheck && bun run lint && bun run fmt:check",
+    "publish:dry": "bun run check && bun publish --dry-run",
+    "publish:npm": "bun run check && bun publish"
   },
   "dependencies": {
     "@effect/atom-solid": "4.0.0-beta.11",

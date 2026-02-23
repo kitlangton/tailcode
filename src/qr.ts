@@ -1,7 +1,7 @@
 import QRCode from "qrcode"
 
 const ANSI_ESCAPE_RE = new RegExp(
-  "[\\u001b\\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]",
+  `[${String.fromCharCode(27)}${String.fromCharCode(155)}][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]`,
   "g",
 )
 
