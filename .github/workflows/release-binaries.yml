@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: write
-  id-token: write  # Required for NPM Trusted Publishers (OIDC) - Future use
+  id-token: write  # Required for NPM Trusted Publishers (OIDC)
 
 jobs:
   build:
@@ -74,21 +74,6 @@ jobs:
       - name: Build package
         run: bun run build:bundle
 
-      # Option A: NPM Trusted Publishers (OIDC) - Recommended when Bun supports it fully
-      # To enable:
-      # 1. Go to https://www.npmjs.com/package/@kitlangton/tailcode → Settings → "Trusted Publishers"
-      # 2. Add GitHub repo: kitlangton/tailcode
-      # 3. Add workflow: .github/workflows/release-binaries.yml
-      # 4. Uncomment below and remove Option B:
-      #
-      # - name: Publish to NPM (OIDC/Trusted Publishers)
-      #   run: bun publish --access public
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # Option B: NPM Token (Current approach - works today)
-      # Create token at https://www.npmjs.com/settings/[username]/tokens
-      # Add as GitHub Secret: NPM_TOKEN
       - name: Publish to NPM
         run: bun publish --access public
         env:

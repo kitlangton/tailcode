@@ -1,6 +1,6 @@
 {
   "name": "@kitlangton/tailcode",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Terminal wizard for publishing OpenCode to your Tailscale tailnet",
   "license": "MIT",
   "type": "module",
