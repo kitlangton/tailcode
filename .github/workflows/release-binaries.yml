@@ -119,10 +119,65 @@ jobs:
     needs: github-release
     runs-on: ubuntu-latest
     steps:
-      - name: Update Homebrew formula
-        uses: prantlf/update-formula@v1
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
         with:
-          tap: kitlangton/homebrew-tap
-          formula: tailcode
-          tag: ${{ github.ref_name }}
-          github-token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          repository: kitlangton/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Download release binaries and update formula
+        run: |
+          VERSION=${{ github.ref_name }}
+          
+          # Download binaries and calculate SHA256
+          curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-arm64" -o /tmp/tailcode-darwin-arm64
+          curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-x64" -o /tmp/tailcode-darwin-x64
+          curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-linux-x64" -o /tmp/tailcode-linux-x64
+          
+          SHA256_DARWIN_ARM64=$(sha256sum /tmp/tailcode-darwin-arm64 | cut -d' ' -f1)
+          SHA256_DARWIN_X64=$(sha256sum /tmp/tailcode-darwin-x64 | cut -d' ' -f1)
+          SHA256_LINUX_X64=$(sha256sum /tmp/tailcode-linux-x64 | cut -d' ' -f1)
+          
+          # Update formula
+          cat > homebrew-tap/Formula/tailcode.rb << EOF
+class Tailcode < Formula
+  desc "Terminal wizard for publishing OpenCode to your Tailscale tailnet"
+  homepage "https://github.com/kitlangton/tailcode"
+  version "${VERSION#v}"
+
+  on_macos do
+    if Hardware::CPU.arm?
+      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-arm64"
+      sha256 "${SHA256_DARWIN_ARM64}"
+    else
+      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-x64"
+      sha256 "${SHA256_DARWIN_X64}"
+    end
+  end
+
+  on_linux do
+    if Hardware::CPU.intel?
+      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-linux-x64"
+      sha256 "${SHA256_LINUX_X64}"
+    end
+  end
+
+  def install
+    bin.install Dir["tailcode*"].first => "tailcode"
+  end
+
+  test do
+    system "#{bin}/tailcode", "--help"
+  end
+end
+EOF
+
+      - name: Commit and push formula update
+        run: |
+          cd homebrew-tap
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Formula/tailcode.rb
+          git commit -m "Update tailcode to ${{ github.ref_name }}"
+          git push
