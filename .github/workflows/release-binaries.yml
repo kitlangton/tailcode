@@ -97,13 +97,17 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node.js for NPM publishing
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Install dependencies
         run: bun install
 
       - name: Build package
         run: bun run build:bundle
 
-      - name: Publish to NPM
-        run: bun publish --access public
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to NPM with OIDC
+        run: npm publish --access public --provenance
