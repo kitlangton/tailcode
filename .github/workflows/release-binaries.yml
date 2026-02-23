@@ -1,4 +1,4 @@
-name: Release Binaries
+name: Release
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write  # Required for NPM Trusted Publishers (OIDC) - Future use
 
 jobs:
   build:
@@ -34,20 +35,61 @@ jobs:
           path: dist/releases/
           retention-days: 5
 
-  release:
+  github-release:
     needs: build
     runs-on: macos-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: binaries
           path: dist/releases/
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: dist/releases/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-npm:
+    needs: build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build package
+        run: bun run build:bundle
+
+      # Option A: NPM Trusted Publishers (OIDC) - Recommended when Bun supports it fully
+      # To enable:
+      # 1. Go to https://www.npmjs.com/package/@kitlangton/tailcode → Settings → "Trusted Publishers"
+      # 2. Add GitHub repo: kitlangton/tailcode
+      # 3. Add workflow: .github/workflows/release-binaries.yml
+      # 4. Uncomment below and remove Option B:
+      #
+      # - name: Publish to NPM (OIDC/Trusted Publishers)
+      #   run: bun publish --access public
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Option B: NPM Token (Current approach - works today)
+      # Create token at https://www.npmjs.com/settings/[username]/tokens
+      # Add as GitHub Secret: NPM_TOKEN
+      - name: Publish to NPM
+        run: bun publish --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
