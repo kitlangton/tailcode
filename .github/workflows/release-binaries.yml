@@ -127,51 +127,66 @@ jobs:
           path: homebrew-tap
 
       - name: Download release binaries and update formula
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
-          VERSION=${{ github.ref_name }}
-          
           # Download binaries and calculate SHA256
           curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-arm64" -o /tmp/tailcode-darwin-arm64
           curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-x64" -o /tmp/tailcode-darwin-x64
           curl -sL "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-linux-x64" -o /tmp/tailcode-linux-x64
-          
+
           SHA256_DARWIN_ARM64=$(sha256sum /tmp/tailcode-darwin-arm64 | cut -d' ' -f1)
           SHA256_DARWIN_X64=$(sha256sum /tmp/tailcode-darwin-x64 | cut -d' ' -f1)
           SHA256_LINUX_X64=$(sha256sum /tmp/tailcode-linux-x64 | cut -d' ' -f1)
-          
-          # Update formula
-          cat > homebrew-tap/Formula/tailcode.rb << EOF
-class Tailcode < Formula
-  desc "Terminal wizard for publishing OpenCode to your Tailscale tailnet"
-  homepage "https://github.com/kitlangton/tailcode"
-  version "${VERSION#v}"
 
-  on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-arm64"
-      sha256 "${SHA256_DARWIN_ARM64}"
-    else
-      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-darwin-x64"
-      sha256 "${SHA256_DARWIN_X64}"
-    end
-  end
+          export SHA256_DARWIN_ARM64
+          export SHA256_DARWIN_X64
+          export SHA256_LINUX_X64
 
-  on_linux do
-    if Hardware::CPU.intel?
-      url "https://github.com/kitlangton/tailcode/releases/download/${VERSION}/tailcode-linux-x64"
-      sha256 "${SHA256_LINUX_X64}"
-    end
-  end
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
 
-  def install
-    bin.install Dir["tailcode*"].first => "tailcode"
-  end
+          version = os.environ["VERSION"]
+          version_no_v = version[1:] if version.startswith("v") else version
+          sha_darwin_arm64 = os.environ["SHA256_DARWIN_ARM64"]
+          sha_darwin_x64 = os.environ["SHA256_DARWIN_X64"]
+          sha_linux_x64 = os.environ["SHA256_LINUX_X64"]
 
-  test do
-    system "#{bin}/tailcode", "--help"
-  end
-end
-EOF
+          formula = f'''class Tailcode < Formula
+            desc "Terminal wizard for publishing OpenCode to your Tailscale tailnet"
+            homepage "https://github.com/kitlangton/tailcode"
+            version "{version_no_v}"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/kitlangton/tailcode/releases/download/{version}/tailcode-darwin-arm64"
+                sha256 "{sha_darwin_arm64}"
+              else
+                url "https://github.com/kitlangton/tailcode/releases/download/{version}/tailcode-darwin-x64"
+                sha256 "{sha_darwin_x64}"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.intel?
+                url "https://github.com/kitlangton/tailcode/releases/download/{version}/tailcode-linux-x64"
+                sha256 "{sha_linux_x64}"
+              end
+            end
+
+            def install
+              bin.install Dir["tailcode*"].first => "tailcode"
+            end
+
+            test do
+              system "#{{bin}}/tailcode", "--help"
+            end
+          end
+          '''
+
+          Path("homebrew-tap/Formula/tailcode.rb").write_text(formula)
+          PY
 
       - name: Commit and push formula update
         run: |
@@ -179,5 +194,9 @@ EOF
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add Formula/tailcode.rb
+          if git diff --cached --quiet; then
+            echo "No Homebrew formula changes to commit"
+            exit 0
+          fi
           git commit -m "Update tailcode to ${{ github.ref_name }}"
           git push
