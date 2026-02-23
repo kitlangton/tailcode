@@ -6,7 +6,7 @@ const DEFAULT_PORT = 4096
 
 function printHelp() {
   process.stdout.write(
-    `tailcode\n\nUsage:\n  tailcode [--wizard] [--attach] [--help]\n\nOptions:\n  --wizard  Always open the TailCode setup wizard\n  --attach  Attach to an already-running local OpenCode server\n  --help    Show this help\n`,
+    `tailcode\n\nUsage:\n  tailcode [--attach] [--help]\n\nOptions:\n  --attach  Attach to an already-running local OpenCode server\n  --help    Show this help\n`,
   )
 }
 
@@ -35,8 +35,8 @@ async function isHealthy(port: number) {
 async function runAttach(port: number) {
   const bin = Bun.which("opencode")
   if (!bin) {
-    process.stderr.write("tailcode: 'opencode' is not installed (launching wizard instead)\n")
-    return false
+    process.stderr.write("tailcode: 'opencode' is not installed\n")
+    process.exit(1)
   }
 
   const target = `http://127.0.0.1:${port}`
@@ -52,7 +52,6 @@ async function runAttach(port: number) {
 }
 
 const args = process.argv.slice(2)
-const forceWizard = args.includes("--wizard")
 const forceAttach = args.includes("--attach")
 
 if (args.includes("--help") || args.includes("-h")) {
@@ -60,24 +59,17 @@ if (args.includes("--help") || args.includes("-h")) {
   process.exit(0)
 }
 
-if (forceWizard && forceAttach) {
-  process.stderr.write("tailcode: use either --wizard or --attach, not both\n")
-  process.exit(1)
-}
-
 const port = resolvePort()
 
-if (!forceWizard) {
+if (forceAttach) {
   const healthy = await isHealthy(port)
   if (healthy) {
     await runAttach(port)
-  }
-
-  if (forceAttach) {
+  } else {
     process.stderr.write(`tailcode: OpenCode is not running on http://127.0.0.1:${port}\n`)
-    process.stderr.write("tailcode: run without --attach to start the setup wizard\n")
     process.exit(1)
   }
 }
 
+// Default: always launch the wizard
 await import("../src/main.tsx")
