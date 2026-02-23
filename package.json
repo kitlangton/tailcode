@@ -2,7 +2,7 @@
   "name": "@kitlangton/tailcode",
   "version": "0.1.1",
   "description": "Terminal wizard for publishing OpenCode to your Tailscale tailnet",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
