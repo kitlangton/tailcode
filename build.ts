@@ -95,30 +95,25 @@ async function main() {
       const platform = process.platform;
       const arch = process.arch;
 
-      let targets: CompileTarget[] = [];
+      let target: CompileTarget | null = null;
 
       if (platform === "darwin") {
-        // Compile both darwin targets — Bun supports cross-compilation
-        targets = ["bun-darwin-arm64", "bun-darwin-x64"];
+        if (arch === "arm64") target = "bun-darwin-arm64";
+        else if (arch === "x64") target = "bun-darwin-x64";
       } else if (platform === "linux") {
-        if (arch === "x64") {
-          targets = ["bun-linux-x64"];
-        } else if (arch === "arm64") {
-          targets = ["bun-linux-arm64"];
-        }
+        if (arch === "x64") target = "bun-linux-x64";
+        else if (arch === "arm64") target = "bun-linux-arm64";
       }
 
-      if (targets.length === 0) {
+      if (!target) {
         console.error(`❌ Unsupported platform: ${platform} ${arch}`);
         process.exit(1);
       }
 
-      for (const target of targets) {
-        const success = await compile(target, bundlePath);
-        if (!success) {
-          console.error(`❌ Failed to compile for ${target}`);
-          process.exit(1);
-        }
+      const success = await compile(target, bundlePath);
+      if (!success) {
+        console.error(`❌ Failed to compile for ${target}`);
+        process.exit(1);
       }
 
       break;

@@ -12,7 +12,14 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest  # arm64
+            artifact: macos-arm64-binary
+          - runner: macos-13      # x64 (Intel)
+            artifact: macos-x64-binary
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,15 +32,15 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build macOS binaries
+      - name: Build macOS binary
         run: |
           bun run build:bundle
           bun run build.ts compile
 
-      - name: Upload macOS artifacts
+      - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-binaries
+          name: ${{ matrix.artifact }}
           path: dist/releases/*
           retention-days: 5
 
@@ -72,6 +79,7 @@ jobs:
         with:
           path: dist/releases/
           merge-multiple: true
+          pattern: '*-binary'
 
       - name: Generate checksums
         run: |
