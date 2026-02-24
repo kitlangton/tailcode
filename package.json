@@ -69,6 +69,6 @@
     "oxlint": "^1.50.0",
     "tuistory": "^0.0.16",
     "typescript": "^5.8.2",
-    "vitest": "^4.1.0-beta.4"
+    "vitest": "4.0.18"
   }
 }
