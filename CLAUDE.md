@@ -77,3 +77,32 @@ bun run dev        # with HMR
 bun run start      # production
 bun run showcase   # component showcase
 ```
+
+## Release Process
+
+Releases are fully automated via `.github/workflows/release-binaries.yml`. **Never manually upload binaries or publish to npm.**
+
+### To cut a release
+
+1. Update `"version"` in `package.json`
+2. Commit: `git commit -m "chore: bump version to X.Y.Z"`
+3. Push to main: `git push origin main`
+4. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`
+
+The tag push triggers the workflow. That's it.
+
+### What the workflow does
+
+| Job | Runner | Output |
+|-----|--------|--------|
+| `build-macos` | `macos-latest` (arm64) | `tailcode-darwin-arm64` + `tailcode-darwin-x64` (cross-compiled) |
+| `build-linux` | `ubuntu-latest` | `tailcode-linux-x64` |
+| `github-release` | ubuntu | GitHub Release with all binaries + `SHA256SUMS` |
+| `publish-npm` | ubuntu | `@kitlangton/tailcode` on npm |
+| `update-homebrew` | ubuntu | Updates `kitlangton/homebrew-tap` formula |
+
+### npm package note
+
+The npm package ships `dist/tailcode.js` (pre-bundled with the Solid JSX plugin) rather than raw
+`.tsx` source. `bunfig.toml`'s `preload` only applies in the local project directory — globally
+installed packages don't inherit it — so shipping pre-built JS is required for correct JSX rendering.
