@@ -63,10 +63,10 @@ jobs:
           bun run build:bundle
           bun run build.ts compile
 
-      - name: Upload Linux artifacts
+      - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-binaries
+          name: linux-x64-binary
           path: dist/releases/*
           retention-days: 5
 
