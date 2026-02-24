@@ -200,3 +200,65 @@ jobs:
           fi
           git commit -m "Update tailcode to ${{ github.ref_name }}"
           git push
+
+  verify:
+    needs: [github-release, publish-npm, update-homebrew]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify GitHub Release assets
+        env:
+          VERSION: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking GitHub release assets for $VERSION..."
+          ASSETS=$(gh release view "$VERSION" --repo kitlangton/tailcode --json assets -q '[.assets[].name] | join(" ")')
+          FAILED=0
+          for name in tailcode-darwin-arm64 tailcode-darwin-x64 tailcode-linux-x64 SHA256SUMS; do
+            if echo "$ASSETS" | grep -q "$name"; then
+              echo "✅ $name"
+            else
+              echo "❌ Missing: $name"
+              FAILED=1
+            fi
+          done
+          [ "$FAILED" -eq 0 ] || exit 1
+
+      - name: Verify npm package
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION_NO_V="${VERSION#v}"
+          echo "Checking npm for @kitlangton/tailcode@$VERSION_NO_V..."
+          for i in $(seq 1 12); do
+            PUBLISHED=$(npm view @kitlangton/tailcode version 2>/dev/null || true)
+            if [ "$PUBLISHED" = "$VERSION_NO_V" ]; then
+              echo "✅ npm: @kitlangton/tailcode@$VERSION_NO_V"
+              break
+            fi
+            echo "⏳ ($i/12) npm shows '$PUBLISHED', retrying in 10s..."
+            sleep 10
+          done
+          if [ "$PUBLISHED" != "$VERSION_NO_V" ]; then
+            echo "❌ npm not updated: expected $VERSION_NO_V, got $PUBLISHED"
+            exit 1
+          fi
+
+      - name: Verify Homebrew formula
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION_NO_V="${VERSION#v}"
+          echo "Checking Homebrew formula for $VERSION_NO_V..."
+          for i in $(seq 1 12); do
+            FORMULA=$(curl -sf "https://raw.githubusercontent.com/kitlangton/homebrew-tap/main/Formula/tailcode.rb" || true)
+            if echo "$FORMULA" | grep -q "version \"$VERSION_NO_V\""; then
+              echo "✅ Homebrew formula updated to $VERSION_NO_V"
+              break
+            fi
+            echo "⏳ ($i/12) formula not updated yet, retrying in 10s..."
+            sleep 10
+          done
+          if ! echo "$FORMULA" | grep -q "version \"$VERSION_NO_V\""; then
+            echo "❌ Homebrew formula not updated to $VERSION_NO_V"
+            exit 1
+          fi
