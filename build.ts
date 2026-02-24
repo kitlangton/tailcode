@@ -92,35 +92,33 @@ async function main() {
         await bundle();
       }
 
-      // Compile only for current platform (native build)
       const platform = process.platform;
       const arch = process.arch;
-      
-      let target: CompileTarget | null = null;
-      
+
+      let targets: CompileTarget[] = [];
+
       if (platform === "darwin") {
-        if (arch === "arm64") {
-          target = "bun-darwin-arm64";
-        } else if (arch === "x64") {
-          target = "bun-darwin-x64";
-        }
+        // Compile both darwin targets — Bun supports cross-compilation
+        targets = ["bun-darwin-arm64", "bun-darwin-x64"];
       } else if (platform === "linux") {
         if (arch === "x64") {
-          target = "bun-linux-x64";
+          targets = ["bun-linux-x64"];
         } else if (arch === "arm64") {
-          target = "bun-linux-arm64";
+          targets = ["bun-linux-arm64"];
         }
       }
 
-      if (!target) {
+      if (targets.length === 0) {
         console.error(`❌ Unsupported platform: ${platform} ${arch}`);
         process.exit(1);
       }
 
-      const success = await compile(target, bundlePath);
-      if (!success) {
-        console.error(`❌ Failed to compile for ${target}`);
-        process.exit(1);
+      for (const target of targets) {
+        const success = await compile(target, bundlePath);
+        if (!success) {
+          console.error(`❌ Failed to compile for ${target}`);
+          process.exit(1);
+        }
       }
 
       break;

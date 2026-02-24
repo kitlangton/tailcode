@@ -23,20 +23,11 @@
     "bun": ">=1.3.0"
   },
   "files": [
-    "bin/tailcode.ts",
-    "src/main.tsx",
-    "src/app.tsx",
-    "src/flow.ts",
-    "src/runtime.ts",
-    "src/qr.ts",
-    "src/state.ts",
-    "src/services/*.ts",
-    "tsconfig.json",
-    "bunfig.toml",
+    "dist/tailcode.js",
     "README.md"
   ],
   "bin": {
-    "tailcode": "./bin/tailcode.ts"
+    "tailcode": "./dist/tailcode.js"
   },
   "publishConfig": {
     "access": "public"
