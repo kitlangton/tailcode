@@ -133,7 +133,7 @@ export class Tailscale extends ServiceMap.Service<
         runString(bin, ["serve", "status", "--json"]).pipe(Effect.catch(() => Effect.succeed("")))
 
       const waitForTailnetConnection = (bin: string) =>
-        run(bin, ["ip", "-4"]).pipe(
+        run(bin, ["ip"]).pipe(
           Effect.timeoutOrElse({
             duration: Duration.seconds(2),
             onTimeout: () => Effect.fail(new CommandFailed({ command: "tailscale ip", message: "timeout" })),
@@ -155,7 +155,7 @@ export class Tailscale extends ServiceMap.Service<
         if (!bin) return yield* new BinaryNotFound({ binary: "tailscale" })
 
         append("Checking Tailscale connection...\n")
-        const checkCode = yield* run(bin, ["ip", "-4"]).pipe(
+        const checkCode = yield* run(bin, ["ip"]).pipe(
           Effect.timeoutOrElse({
             duration: Duration.seconds(3),
             onTimeout: () => Effect.succeed(1),
